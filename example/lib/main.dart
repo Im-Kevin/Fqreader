@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:fqreader/fqreader.dart';
 import 'package:flustars/flustars.dart';
+import 'package:cool_ui/cool_ui.dart';
 
 void main() => runApp(new MyApp());
 
@@ -27,6 +28,7 @@ class _MyAppState extends State<MyApp> {
         ScreenUtil.getInstance().init(context);
 
         double bodyHeight = (ScreenUtil.screenHeight - ScreenUtil.appBarHeight);
+        Rect viewRect = Rect.fromLTRB(0, 60, ScreenUtil.screenWidth, ScreenUtil.screenHeight);
         Rect scanRect= Rect.fromLTWH(
             ScreenUtil.screenWidth * 0.1,
             (bodyHeight - ScreenUtil.screenWidth * 0.8) / 2,
@@ -39,21 +41,20 @@ class _MyAppState extends State<MyApp> {
           body: Stack(
             children: <Widget>[
               ScanView(onScan: (value){
-                print(value);
-              },scanRect: Rect.fromLTWH(
-                  scanRect.left * MediaQuery.of(context).devicePixelRatio,
-                  scanRect.top * MediaQuery.of(context).devicePixelRatio,
-                  scanRect.width * MediaQuery.of(context).devicePixelRatio,
-                  scanRect.height * MediaQuery.of(context).devicePixelRatio)),
+                showWeuiSuccessToast(
+                    context: context,
+                    message:Text("扫描成功:" + value)
+                );
+              },viewRect: viewRect,scanRect:scanRect),
               Positioned(
                 top: 0.0,
                 left: 0.0,
-                child:FlatButton(child: Text("启动扫描"),onPressed: ()=>Fqreader.startScan(),),
+                child:FlatButton(child: Text("启动扫描"),color: Colors.red,onPressed: ()=>Fqreader.startScan(),),
               ),
               Positioned(
                 top: 0.0,
                 left: 80.0,
-                child:FlatButton(child: Text("暂停扫描"),onPressed: ()=>Fqreader.stopScan(),),
+                child:FlatButton(child: Text("暂停扫描"),color: Colors.red,onPressed: ()=>Fqreader.stopScan(),),
               ),
               Positioned(
                 top: scanRect.top,
