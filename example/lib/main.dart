@@ -14,24 +14,26 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+  GlobalKey<ScanViewState> scanView;
 
   @override
   void initState() {
     super.initState();
+    scanView = GlobalKey<ScanViewState>();
   }
 
   @override
   Widget build(BuildContext context) {
-
     return new MaterialApp(
-      home: Builder(builder: (context){
+      home: Builder(builder: (context) {
         ScreenUtil.getInstance().init(context);
 
         double bodyHeight = (ScreenUtil.screenHeight - ScreenUtil.appBarHeight);
-        Rect viewRect = Rect.fromLTRB(0, 60, ScreenUtil.screenWidth, ScreenUtil.screenHeight);
-        Rect scanRect= Rect.fromLTWH(
+        Rect viewRect = Rect.fromLTRB(
+            0, ScreenUtil.appBarHeight, ScreenUtil.screenWidth, ScreenUtil.screenHeight);
+        Rect scanRect = Rect.fromLTWH(
             ScreenUtil.screenWidth * 0.1,
-            (bodyHeight - ScreenUtil.screenWidth * 0.8) / 2,
+            (bodyHeight - bodyHeight * 0.8) / 2 + 60,
             ScreenUtil.screenWidth * 0.8,
             ScreenUtil.screenWidth * 0.8);
         return new Scaffold(
@@ -40,31 +42,68 @@ class _MyAppState extends State<MyApp> {
           ),
           body: Stack(
             children: <Widget>[
-              ScanView(onScan: (value){
-                showWeuiSuccessToast(
-                    context: context,
-                    message:Text("扫描成功:" + value)
-                );
-              },viewRect: viewRect,scanRect:scanRect),
+              ScanView(
+                  key: scanView,
+                  continuityScan: true,
+                  scanType: [
+                    ScanType.QR_CODE,
+                    ScanType.CODABAR,
+                    ScanType.CODE_39,
+                    ScanType.CODE_93,
+                    ScanType.CODE_128,
+                    ScanType.EAN8,
+                    ScanType.EAN13
+                  ],
+                  onScan: (value) async {
+                    showWeuiSuccessToast(
+                        context: context, message: Text("扫描成功:" + value),closeDuration:Duration(milliseconds: 500));
+                    return true;
+                  },
+                  viewRect: viewRect,
+                  scanRect: scanRect),
               Positioned(
                 top: 0.0,
                 left: 0.0,
-                child:FlatButton(child: Text("启动扫描"),color: Colors.red,onPressed: ()=>Fqreader.startScan(),),
+                child: FlatButton(
+                  child: Text("启动扫描"),
+                  color: Colors.red,
+                  onPressed: () => scanView.currentState.startScan(),
+                ),
               ),
               Positioned(
                 top: 0.0,
                 left: 80.0,
-                child:FlatButton(child: Text("暂停扫描"),color: Colors.red,onPressed: ()=>Fqreader.stopScan(),),
+                child: FlatButton(
+                  child: Text("暂停扫描"),
+                  color: Colors.red,
+                  onPressed: () => scanView.currentState.stopScan(),
+                ),
               ),
               Positioned(
-                top: scanRect.top,
+                top: 0.0,
+                left: 160.0,
+                child: FlatButton(
+                  child: Text("开灯"),
+                  color: Colors.red,
+                  onPressed: () => scanView.currentState.turnOn(),
+                ),
+              ),
+              Positioned(
+                top: 0.0,
+                left: 240.0,
+                child: FlatButton(
+                  child: Text("关灯"),
+                  color: Colors.red,
+                  onPressed: () => scanView.currentState.turnOff(),
+                ),
+              ),
+              Positioned(
+                top: scanRect.top - 60,
                 left: scanRect.left,
                 child: Container(
                   width: scanRect.width,
                   height: scanRect.height,
-                  decoration: BoxDecoration(
-                      border: Border.all()
-                  ),
+                  decoration: BoxDecoration(border: Border.all()),
                 ),
               )
             ],
