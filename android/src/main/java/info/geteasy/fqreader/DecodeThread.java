@@ -8,6 +8,7 @@ import android.os.Message;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.BinaryBitmap;
 import com.google.zxing.DecodeHintType;
+import com.google.zxing.LuminanceSource;
 import com.google.zxing.MultiFormatReader;
 import com.google.zxing.NotFoundException;
 import com.google.zxing.PlanarYUVLuminanceSource;
@@ -35,31 +36,43 @@ import java.util.List;
 import java.util.Map;
 
 public class DecodeThread extends  Thread {
-    public boolean exit = false;
-    private Map<DecodeHintType, Object> mHints = new Hashtable<>();
+    private boolean mExit = false;
     private byte[] mImageBytes;;
     private Rect mScanRect;
     private Camera.Size mCameraSize;
     private Handler mDecodeHandler;
-    private Reader[] mReaders;
+    private MultipleDecode mDecode;
 
-    public DecodeThread(
+    DecodeThread(
                         Handler decodeHandler,
                         Camera.Size cameraSize,
                         Rect scanRect){
         this.mScanRect = scanRect;
         this.mCameraSize = cameraSize;
         this.mDecodeHandler = decodeHandler;
+        mDecode = new MultipleDecode();
 
         //设置字符集为UTF-8
-        mHints.put(DecodeHintType.CHARACTER_SET, "utf-8");
+        Map<DecodeHintType, Object> hints = new Hashtable<>();
+        hints.put(DecodeHintType.CHARACTER_SET, "utf-8");
+        mDecode.setHints(hints);
     }
-
-    public void decode(byte[] bytes){
+    void decode(byte[] bytes){
         synchronized (this){
             this.notify();
         }
         this.mImageBytes = bytes;
+    }
+    void setFormats(List<String> formats){
+        mDecode.setFormats(formats);
+    }
+
+    void release(){
+        synchronized (this) {
+            mExit = true;
+            mImageBytes = null;
+            this.notify();//等待下一次解码
+        }
     }
 
     @Override
@@ -71,22 +84,22 @@ public class DecodeThread extends  Thread {
                 e.printStackTrace();
             }
         }
-        while (!exit) {
+        while (!mExit) {
             try {
                 int width = mCameraSize.width;
                 int height = mCameraSize.height;
 
                 com.google.zxing.Result rawResult = null;
-                PlanarYUVLuminanceSource source = new PlanarYUVLuminanceSource(mImageBytes,
+                LuminanceSource source = new PlanarYUVLuminanceSource(mImageBytes,
                         width, height,
-                        mScanRect.top,mScanRect.left,
-                        mScanRect.height(),mScanRect.width(),
+                        mScanRect.left,mScanRect.top,
+                        mScanRect.width(),mScanRect.height(),
                         true);
 
                 BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
                 try {
 
-                    rawResult = decodeInternal(bitmap);
+                    rawResult = mDecode.decode(bitmap);
                 } catch (ReaderException re) {
                     // continue
                 } catch (NullPointerException npe) {
@@ -94,21 +107,21 @@ public class DecodeThread extends  Thread {
                 } catch (ArrayIndexOutOfBoundsException aoe) {
                     //
                 } finally {
-                    reset();
+                    mDecode.reset();
                 }
-//
-//                    if (rawResult == null) {
-//                        LuminanceSource invertedSource = source.invert();
-//                        bitmap = new BinaryBitmap(new HybridBinarizer(invertedSource));
-//                        try {
-//                            rawResult = multiFormatReader.decodeWithState(bitmap);
-//
-//                        } catch (NotFoundException e) {
-//                            // continue
-//                        } finally {
-//                            multiFormatReader.reset();
-//                        }
-//                    }
+
+                    if (rawResult == null) {
+                        LuminanceSource invertedSource = source.rotateCounterClockwise();
+                        bitmap = new BinaryBitmap(new HybridBinarizer(invertedSource));
+                        try {
+                            rawResult = mDecode.decode(bitmap);
+
+                        } catch (NotFoundException e) {
+                            // continue
+                        } finally {
+                            mDecode.reset();
+                        }
+                    }
 
                 if (rawResult != null) {
                     Message msg = new Message();
@@ -130,77 +143,4 @@ public class DecodeThread extends  Thread {
         }
     }
 
-    public void setFormats(List<String> formats){
-        ArrayList<Reader> readers = new ArrayList<>();
-        for(int i = 0;i< formats.size();i++){
-            String item = formats.get(i);
-            switch (item){
-                case "ScanType.CODABAR":
-                    readers.add(new CodaBarReader());
-                    break;
-                case "ScanType.QR_CODE":
-                    readers.add(new QRCodeReader());
-                    break;
-                case "ScanType.AZTEC":
-                    readers.add(new AztecReader());
-                    break;
-                case "ScanType.CODE_39":
-                    readers.add(new Code39Reader());
-                    break;
-                case "ScanType.CODE_93":
-                    readers.add(new Code93Reader());
-                    break;
-                case "ScanType.CODE_128":
-                    readers.add(new Code128Reader());
-                    break;
-                case "ScanType.EAN8":
-                    readers.add(new EAN8Reader());
-                    break;
-                case "ScanType.EAN13":
-                    readers.add(new EAN13Reader());
-                    break;
-                case "ScanType.ITF":
-                    readers.add(new ITFReader());
-                    break;
-                case "ScanType.DATA_MATRIX":
-                    readers.add(new DataMatrixReader());
-                    break;
-                case "ScanType.PDF_417":
-                    readers.add(new PDF417Reader());
-                    break;
-            }
-        }
-        this.mReaders = readers.toArray(new Reader[readers.size()]);
-
-    }
-
-    public  void release(){
-        synchronized (this) {
-            exit = true;
-            mImageBytes = null;
-            mReaders = null;
-            this.notify();//等待下一次解码
-        }
-    }
-
-    private void reset() {
-        if (mReaders != null) {
-            for (Reader reader : mReaders) {
-                reader.reset();
-            }
-        }
-    }
-
-    private Result decodeInternal(BinaryBitmap image) throws NotFoundException {
-        if (mReaders != null) {
-            for (Reader reader : mReaders) {
-                try {
-                    return reader.decode(image, mHints);
-                } catch (ReaderException re) {
-                    // continue
-                }
-            }
-        }
-        throw NotFoundException.getNotFoundInstance();
-    }
 }

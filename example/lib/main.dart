@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:fqreader/fqreader.dart';
 import 'package:flustars/flustars.dart';
 import 'package:cool_ui/cool_ui.dart';
+import 'package:image_picker/image_picker.dart';
 
 void main() => runApp(new MyApp());
 
@@ -45,15 +46,6 @@ class _MyAppState extends State<MyApp> {
               ScanView(
                   key: scanView,
                   continuityScan: true,
-                  scanType: [
-                    ScanType.QR_CODE,
-                    ScanType.CODABAR,
-                    ScanType.CODE_39,
-                    ScanType.CODE_93,
-                    ScanType.CODE_128,
-                    ScanType.EAN8,
-                    ScanType.EAN13
-                  ],
                   onScan: (value) async {
                     showWeuiSuccessToast(
                         context: context, message: Text("扫描成功:" + value),closeDuration:Duration(milliseconds: 500));
@@ -95,6 +87,25 @@ class _MyAppState extends State<MyApp> {
                   child: Text("关灯"),
                   color: Colors.red,
                   onPressed: () => scanView.currentState.turnOff(),
+                ),
+              ),
+              Positioned(
+                top: 60.0,
+                left: 0.0,
+                child: FlatButton(
+                  child: Text("扫描图片"),
+                  color: Colors.red,
+                  onPressed: () async {
+                    var image = await ImagePicker.pickImage(source: ImageSource.camera);
+                    var value = await Fqreader.decodeImg(image, [ScanType.ALL]);
+                    if(value == null){
+                      showWeuiSuccessToast(
+                          context: context, message: Text("未扫描到数据"),closeDuration:Duration(milliseconds: 3000));
+                    }else{
+                      showWeuiSuccessToast(
+                          context: context, message: Text("扫描成功:" + value),closeDuration:Duration(milliseconds: 500));
+                    }
+                  },
                 ),
               ),
               Positioned(

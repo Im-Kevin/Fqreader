@@ -1,6 +1,8 @@
 library fqreader;
 
 import 'dart:async';
+import 'dart:io';
+import 'dart:typed_data';
 
 import 'dart:ui' as ui;
 
@@ -10,11 +12,26 @@ import 'package:flutter/services.dart';
 
 typedef ScanEvent = Future<bool> Function(String value);
 
-class _Fqreader {
+class Fqreader {
   static const MethodChannel _channel =
   const MethodChannel('fqreader');
 
-  static Future<int> initView({
+  static Future<String> decodeImg(File file,List<ScanType> scanType) async{
+    var scanStr = new List<String>();
+    scanType.forEach((item){
+      scanStr.add(item.toString());
+    });
+
+    List<int> data = file.readAsBytesSync();
+    Uint8List uData = new Uint8List.fromList(data);
+
+    return await  _channel.invokeMethod('decodeImg',{
+      "image": uData,
+      "scanType": scanStr
+    });
+  }
+
+  static Future<int> _initView({
       @required Rect viewRect,
       @required Rect scanRect,
       @required List<ScanType> scanType,
@@ -42,20 +59,20 @@ class _Fqreader {
     });
     return textureId;
   }
-  static Future startScan() async{
+  static Future _startScan() async{
     await _channel.invokeMethod('startScan');
   }
 
-  static Future stopScan() async{
+  static Future _stopScan() async{
     await _channel.invokeMethod('stopScan');
   }
-  static Future turnOn() async{
+  static Future _turnOn() async{
     await _channel.invokeMethod("turnOn");
   }
-  static Future turnOff() async{
+  static Future _turnOff() async{
     await _channel.invokeMethod("turnOff");
   }
-  static Future release() async{
+  static Future _release() async{
     await _channel.invokeMethod("release");
   }
 }
@@ -102,7 +119,7 @@ class ScanView extends StatefulWidget{
       this.onScan,
       @required this.viewRect,
       @required this.scanRect,
-      this.scanType = const [ScanType.QR_CODE],
+      this.scanType = const [ScanType.ALL],
       this.autoScan = true,
       this.continuityScan = false,
       this.scanInterval = const Duration(milliseconds:500)})
@@ -120,7 +137,7 @@ class ScanViewState extends State<ScanView>{
     // TODO: implement initState
     super.initState();
     MediaQueryData mediaQuery = MediaQueryData.fromWindow(ui.window);
-    _Fqreader.initView(
+    Fqreader._initView(
         viewRect: widget.viewRect,
         scanRect:widget.scanRect,
         devicePixelRatio:mediaQuery.devicePixelRatio,
@@ -130,7 +147,7 @@ class ScanViewState extends State<ScanView>{
         _textureId = textureId;
       });
       if(widget.autoScan){
-        _Fqreader.startScan();
+        Fqreader._startScan();
       }
       _readySubscription = new EventChannel('fqreader/scanEvents$_textureId')
           .receiveBroadcastStream()
@@ -149,33 +166,33 @@ class ScanViewState extends State<ScanView>{
   void dispose(){
     super.dispose();
     _readySubscription.cancel();
-    _Fqreader.release();
+    Fqreader._release();
   }
 
   /**
    * 开始扫描
    */
   Future startScan() async{
-    await _Fqreader.startScan();
+    await Fqreader._startScan();
   }
 
   /**
    * 暂停扫描
    */
   Future stopScan() async{
-    await _Fqreader.stopScan();
+    await Fqreader._stopScan();
   }
   /**
    * 开灯
    */
   Future turnOn() async{
-    await _Fqreader.turnOn();
+    await Fqreader._turnOn();
   }
   /**
    * 关灯
    */
   Future turnOff() async{
-    await _Fqreader.turnOff();
+    await Fqreader._turnOff();
   }
 
   void _listener(dynamic value) {
@@ -183,15 +200,15 @@ class ScanViewState extends State<ScanView>{
       {
         if(!widget.continuityScan) //是否连续扫描
           {
-            _Fqreader.stopScan();
+            Fqreader._stopScan();
           }
         widget.onScan(value).then((result){
           if(widget.continuityScan && result){
             Future.delayed(widget.scanInterval,(){
-              _Fqreader.startScan();
+              Fqreader._startScan();
             });
           }else{
-            _Fqreader.stopScan();
+            Fqreader._stopScan();
           }
         });
       }
@@ -199,6 +216,10 @@ class ScanViewState extends State<ScanView>{
 }
 
 enum ScanType{
+  /**
+   * 所有条形码
+   */
+  ALL,
   /**
    *  普通二维码
    */

@@ -10,8 +10,18 @@ import android.hardware.Camera;
 import android.hardware.camera2.CameraManager;
 import android.os.Build;
 
+import com.google.zxing.BinaryBitmap;
+import com.google.zxing.ChecksumException;
+import com.google.zxing.DecodeHintType;
+import com.google.zxing.FormatException;
+import com.google.zxing.NotFoundException;
+import com.google.zxing.PlanarYUVLuminanceSource;
+import com.google.zxing.common.HybridBinarizer;
+
 import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.List;
+import java.util.Map;
 
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
@@ -102,6 +112,33 @@ public class FqreaderPlugin implements MethodCallHandler {
             case "release":
                 scanView.release();
                 scanView = null;
+                break;
+            case "decodeImg":
+                MultipleDecode decode = new MultipleDecode();
+                List<String> decodeImgScanType = call.argument("scanType");
+                byte[] imgData = call.argument("image");
+
+                Map<DecodeHintType, Object> hints = new Hashtable<>();
+                hints.put(DecodeHintType.CHARACTER_SET, "utf-8");
+                decode.setHints(hints);
+                decode.setFormats(decodeImgScanType);
+                try {
+                    com.google.zxing.Result scanResult  = decode.decode(new BinaryBitmap(
+                            new HybridBinarizer(
+                                new BitmapLuminanceSource(imgData)
+                            )));
+                    result.success(scanResult.getText());
+                } catch (NotFoundException e) {
+                    result.success(null);
+                } catch (ChecksumException e) {
+                    result.error("ChecksumException ",e.getLocalizedMessage(),e);
+//                    e.printStackTrace();
+                } catch (FormatException e) {
+                    result.error("FormatException ",e.getLocalizedMessage(),e);
+//                    e.printStackTrace();
+                }catch (Exception e){
+                    result.error("Exception ",e.getLocalizedMessage(),e);
+                }
                 break;
         }
     }

@@ -51,7 +51,7 @@ public class ScanView {
         try {
             mCamera = Camera.open(Camera.CameraInfo.CAMERA_FACING_BACK);
             Camera.Parameters param = mCamera.getParameters();
-            param.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO);
+            param.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
             param.setRotation(90);
 
             // 选择最合适的预览图像大小

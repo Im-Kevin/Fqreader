@@ -21,6 +21,7 @@ dependencies:
   cupertino_icons: ^0.1.2
   flustars: 0.1.3
   cool_ui: 0.1.3
+  image_picker: ^0.4.10+1
   fqreader:
     path: ../
 
