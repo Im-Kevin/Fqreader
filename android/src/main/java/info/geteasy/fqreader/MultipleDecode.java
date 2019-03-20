@@ -92,12 +92,12 @@ public class MultipleDecode implements Reader {
     }
 
     @Override
-    public Result decode(BinaryBitmap image) throws NotFoundException, ChecksumException, FormatException {
+    public Result decode(BinaryBitmap image) throws NotFoundException{
         return decodeInternal(image);
     }
 
     @Override
-    public Result decode(BinaryBitmap image, Map<DecodeHintType, ?> hints) throws NotFoundException, ChecksumException, FormatException {
+    public Result decode(BinaryBitmap image, Map<DecodeHintType, ?> hints) throws NotFoundException{
         setHints(hints);
         return decodeInternal(image);
     }

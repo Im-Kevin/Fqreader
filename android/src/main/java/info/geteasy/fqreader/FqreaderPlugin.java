@@ -14,6 +14,7 @@ import com.google.zxing.BinaryBitmap;
 import com.google.zxing.ChecksumException;
 import com.google.zxing.DecodeHintType;
 import com.google.zxing.FormatException;
+import com.google.zxing.LuminanceSource;
 import com.google.zxing.NotFoundException;
 import com.google.zxing.PlanarYUVLuminanceSource;
 import com.google.zxing.common.HybridBinarizer;
@@ -114,32 +115,52 @@ public class FqreaderPlugin implements MethodCallHandler {
                 scanView = null;
                 break;
             case "decodeImg":
-                MultipleDecode decode = new MultipleDecode();
-                List<String> decodeImgScanType = call.argument("scanType");
-                byte[] imgData = call.argument("image");
-
-                Map<DecodeHintType, Object> hints = new Hashtable<>();
-                hints.put(DecodeHintType.CHARACTER_SET, "utf-8");
-                decode.setHints(hints);
-                decode.setFormats(decodeImgScanType);
-                try {
-                    com.google.zxing.Result scanResult  = decode.decode(new BinaryBitmap(
-                            new HybridBinarizer(
-                                new BitmapLuminanceSource(imgData)
-                            )));
-                    result.success(scanResult.getText());
-                } catch (NotFoundException e) {
-                    result.success(null);
-                } catch (ChecksumException e) {
-                    result.error("ChecksumException ",e.getLocalizedMessage(),e);
-//                    e.printStackTrace();
-                } catch (FormatException e) {
-                    result.error("FormatException ",e.getLocalizedMessage(),e);
-//                    e.printStackTrace();
-                }catch (Exception e){
-                    result.error("Exception ",e.getLocalizedMessage(),e);
-                }
+                decodeImg(call, result);
                 break;
+        }
+    }
+
+    private void decodeImg(MethodCall call, Result result) {
+        MultipleDecode decode = new MultipleDecode();
+        List<String> scanType = call.argument("scanType");
+        byte[] imgData = call.argument("image");
+
+        Map<DecodeHintType, Object> hints = new Hashtable<>();
+        hints.put(DecodeHintType.CHARACTER_SET, "utf-8");
+        decode.setHints(hints);
+        decode.setFormats(scanType);
+        BitmapLuminanceSource source = new BitmapLuminanceSource(imgData);
+        BinaryBitmap bitmap = new BinaryBitmap(
+                new HybridBinarizer(
+                        source
+                ));
+        com.google.zxing.Result scanResult = null;
+        try {
+            scanResult = decode.decode(bitmap);
+            result.success(scanResult.getText());
+        } catch (NotFoundException ignored) {
+
+        } catch (Exception e){
+            result.error(e.getClass().getName(),e.getLocalizedMessage(),e);
+        }
+        finally {
+            decode.reset();
+        }
+        if (scanResult == null) {
+            LuminanceSource invertedSource = source.invert();
+            bitmap = new BinaryBitmap(new HybridBinarizer(invertedSource));
+            try {
+                scanResult = decode.decode(bitmap);
+
+            } catch (NotFoundException ignored) {
+            } catch (Exception e){
+                result.error(e.getClass().getName(),e.getLocalizedMessage(),e);
+            }
+            finally {
+                decode.reset();
+            }
+        }
+        if(scanResult != null){
         }
     }
 

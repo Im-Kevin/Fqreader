@@ -18,8 +18,7 @@ public class DecodeHandler extends Handler implements  Camera.PreviewCallback {
                   List<String> scanType,
                   Rect scanRect){
         mCamera = camera;
-        Camera.Size size = mCamera.getParameters().getPreviewSize();
-        mThread = new DecodeThread(this,size,scanRect);
+        mThread = new DecodeThread(this,mCamera,scanRect);
         mThread.setFormats(scanType);
         mThread.start();
 

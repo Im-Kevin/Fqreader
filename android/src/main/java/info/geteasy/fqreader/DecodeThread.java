@@ -35,20 +35,23 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 
-public class DecodeThread extends  Thread {
+public class DecodeThread extends Thread {
     private boolean mExit = false;
-    private byte[] mImageBytes;;
+    private byte[] mImageBytes;
+    ;
     private Rect mScanRect;
+    private Camera mCamera;
     private Camera.Size mCameraSize;
     private Handler mDecodeHandler;
     private MultipleDecode mDecode;
 
     DecodeThread(
-                        Handler decodeHandler,
-                        Camera.Size cameraSize,
-                        Rect scanRect){
+            Handler decodeHandler,
+            Camera camera,
+            Rect scanRect) {
         this.mScanRect = scanRect;
-        this.mCameraSize = cameraSize;
+        this.mCamera = camera;
+        this.mCameraSize = camera.getParameters().getPreviewSize();
         this.mDecodeHandler = decodeHandler;
         mDecode = new MultipleDecode();
 
@@ -57,17 +60,19 @@ public class DecodeThread extends  Thread {
         hints.put(DecodeHintType.CHARACTER_SET, "utf-8");
         mDecode.setHints(hints);
     }
-    void decode(byte[] bytes){
-        synchronized (this){
+
+    void decode(byte[] bytes) {
+        synchronized (this) {
             this.notify();
         }
         this.mImageBytes = bytes;
     }
-    void setFormats(List<String> formats){
+
+    void setFormats(List<String> formats) {
         mDecode.setFormats(formats);
     }
 
-    void release(){
+    void release() {
         synchronized (this) {
             mExit = true;
             mImageBytes = null;
@@ -86,15 +91,23 @@ public class DecodeThread extends  Thread {
         }
         while (!mExit) {
             try {
+                byte[] data = mImageBytes;
                 int width = mCameraSize.width;
                 int height = mCameraSize.height;
+                int rotationCount = getRotationCount();
+                if (rotationCount == 1 || rotationCount == 3) {
+                    int tmp = width;
+                    width = height;
+                    height = tmp;
+                }
+                data = getRotatedData(data, mCamera);
 
                 com.google.zxing.Result rawResult = null;
-                LuminanceSource source = new PlanarYUVLuminanceSource(mImageBytes,
+                LuminanceSource source = new PlanarYUVLuminanceSource(data,
                         width, height,
-                        mScanRect.left,mScanRect.top,
-                        mScanRect.width(),mScanRect.height(),
-                        true);
+                        mScanRect.left, mScanRect.top,
+                        mScanRect.width(), mScanRect.height(),
+                        false);
 
                 BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
                 try {
@@ -110,18 +123,18 @@ public class DecodeThread extends  Thread {
                     mDecode.reset();
                 }
 
-                    if (rawResult == null) {
-                        LuminanceSource invertedSource = source.rotateCounterClockwise();
-                        bitmap = new BinaryBitmap(new HybridBinarizer(invertedSource));
-                        try {
-                            rawResult = mDecode.decode(bitmap);
+                if (rawResult == null) {
+                    LuminanceSource invertedSource = source.invert();
+                    bitmap = new BinaryBitmap(new HybridBinarizer(invertedSource));
+                    try {
+                        rawResult = mDecode.decode(bitmap);
 
-                        } catch (NotFoundException e) {
-                            // continue
-                        } finally {
-                            mDecode.reset();
-                        }
+                    } catch (NotFoundException e) {
+                        // continue
+                    } finally {
+                        mDecode.reset();
                     }
+                }
 
                 if (rawResult != null) {
                     Message msg = new Message();
@@ -143,4 +156,33 @@ public class DecodeThread extends  Thread {
         }
     }
 
+
+    public byte[] getRotatedData(byte[] data, Camera camera) {
+        Camera.Parameters parameters = camera.getParameters();
+        Camera.Size size = parameters.getPreviewSize();
+        int width = size.width;
+        int height = size.height;
+
+        int rotationCount = getRotationCount();
+
+        if (rotationCount == 1 || rotationCount == 3) {
+            for (int i = 0; i < rotationCount; i++) {
+                byte[] rotatedData = new byte[data.length];
+                for (int y = 0; y < height; y++) {
+                    for (int x = 0; x < width; x++)
+                        rotatedData[x * height + height - y - 1] = data[x + y * width];
+                }
+                data = rotatedData;
+                int tmp = width;
+                width = height;
+                height = tmp;
+            }
+        }
+
+        return data;
+    }
+
+    public int getRotationCount() {
+        return 1;
+    }
 }
