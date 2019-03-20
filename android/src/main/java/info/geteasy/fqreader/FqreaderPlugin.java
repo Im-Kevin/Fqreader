@@ -74,22 +74,20 @@ public class FqreaderPlugin implements MethodCallHandler {
                     return;
                 }
                 HashMap<String, Object> viewRectMap = call.argument("viewRect");
-                Rect viewRect = new Rect(
-                        (int) viewRectMap.get("left"),
-                        (int) viewRectMap.get("top"),
-                        (int) viewRectMap.get("right"),
-                        (int) viewRectMap.get("bottom")
-                );
+                int viewWidth = (int )viewRectMap.get("width");
+                int viewHeight = (int) viewRectMap.get("height");
+
                 HashMap<String, Object> scanRectMap = call.argument("scanRect");
                 Rect scanRect = new Rect(
-                        (int) scanRectMap.get("left"),
+                        (int) scanRectMap.get("width"),
                         (int) scanRectMap.get("top"),
                         (int) scanRectMap.get("right"),
                         (int) scanRectMap.get("bottom")
                 );
                 List<String> scanType = call.argument("scanType");
                 scanView = new ScanView(view, registrar,
-                        viewRect,
+                        viewWidth,
+                        viewHeight,
                         scanRect,
                         scanType,
                         result);

@@ -32,7 +32,7 @@ class Fqreader {
   }
 
   static Future<int> _initView({
-      @required Rect viewRect,
+      @required Size viewSize,
       @required Rect scanRect,
       @required List<ScanType> scanType,
       double devicePixelRatio
@@ -44,10 +44,8 @@ class Fqreader {
 
     final int textureId = await _channel.invokeMethod('initView',{
       "viewRect":{
-        "left":(viewRect.left * devicePixelRatio).toInt(),
-        "top":(viewRect.top* devicePixelRatio).toInt(),
-        "right":(viewRect.right* devicePixelRatio).toInt(),
-        "bottom":(viewRect.bottom* devicePixelRatio).toInt()
+        "width":(viewSize.width* devicePixelRatio).toInt(),
+        "height":(viewSize.height* devicePixelRatio).toInt(),
       },
       "scanRect":{
         "left":(scanRect.left* devicePixelRatio).toInt(),
@@ -92,7 +90,7 @@ class ScanView extends StatefulWidget{
   /**
    * ScanView控件大小
    */
-  final Rect viewRect;
+  final Size viewSize;
 
   /**
    * 是否立即扫描
@@ -117,7 +115,7 @@ class ScanView extends StatefulWidget{
   const ScanView({
       Key key,
       this.onScan,
-      @required this.viewRect,
+      @required this.viewSize,
       @required this.scanRect,
       this.scanType = const [ScanType.ALL],
       this.autoScan = true,
@@ -138,7 +136,7 @@ class ScanViewState extends State<ScanView>{
     super.initState();
     MediaQueryData mediaQuery = MediaQueryData.fromWindow(ui.window);
     Fqreader._initView(
-        viewRect: widget.viewRect,
+        viewSize: widget.viewSize,
         scanRect:widget.scanRect,
         devicePixelRatio:mediaQuery.devicePixelRatio,
         scanType: widget.scanType

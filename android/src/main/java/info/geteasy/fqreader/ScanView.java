@@ -44,7 +44,8 @@ public class ScanView {
 
     ScanView(FlutterView view,
              PluginRegistry.Registrar registrar,
-             Rect viewRect,
+             int viewWidth,
+             int viewHeight,
              Rect scanRect,
              List<String> scanType,
              MethodChannel.Result result) {
@@ -55,7 +56,7 @@ public class ScanView {
             param.setRotation(90);
 
             // 选择最合适的预览图像大小
-            Camera.Size currentSize = matchSize(viewRect, param);
+            Camera.Size currentSize = matchSize(viewWidth,viewHeight, param);
             // 设置预览图像大小
             param.setPreviewSize(currentSize.width, currentSize.height);
             mCamera.setParameters(param);
@@ -116,14 +117,18 @@ public class ScanView {
     /**
      * 选择最合适的预览图片大小
      *
-     * @param viewRect
+     * @param viewWidth
+     * @param viewHeight
      * @param param
      * @return
      */
-    private Camera.Size matchSize(Rect viewRect, Camera.Parameters param) {
+    private Camera.Size matchSize(
+            int viewWidth,
+            int viewHeight,
+            Camera.Parameters param) {
         List<Camera.Size> sizes = param.getSupportedPreviewSizes();
 
-        double viewRatio = viewRect.width() * 1.0 / viewRect.height(); // 获取控件比例
+        double viewRatio = viewWidth * 1.0 / viewHeight; // 获取控件比例
         Camera.Size currentSize = sizes.get(0);
         double currentRatio = currentSize.width * 1.0 / currentSize.height; //获取第一个预览大小的比例
 

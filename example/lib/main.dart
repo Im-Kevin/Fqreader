@@ -30,8 +30,7 @@ class _MyAppState extends State<MyApp> {
         ScreenUtil.getInstance().init(context);
 
         double bodyHeight = (ScreenUtil.screenHeight - ScreenUtil.appBarHeight);
-        Rect viewRect = Rect.fromLTRB(
-            0, ScreenUtil.appBarHeight, ScreenUtil.screenWidth, ScreenUtil.screenHeight);
+        Size viewSize = Size(ScreenUtil.screenWidth, ScreenUtil.screenHeight);
         Rect scanRect = Rect.fromLTWH(
             ScreenUtil.screenWidth * 0.1,
             (bodyHeight - bodyHeight * 0.8) / 2 + 60,
@@ -51,7 +50,7 @@ class _MyAppState extends State<MyApp> {
                         context: context, message: Text("扫描成功:" + value),closeDuration:Duration(milliseconds: 500));
                     return true;
                   },
-                  viewRect: viewRect,
+                  viewSize: viewSize,
                   scanRect: scanRect),
               Positioned(
                 top: 0.0,
