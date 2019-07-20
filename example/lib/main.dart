@@ -42,16 +42,6 @@ class _MyAppState extends State<MyApp> {
           ),
           body: Stack(
             children: <Widget>[
-              ScanView(
-                  key: scanView,
-                  continuityScan: true,
-                  onScan: (value) async {
-                    showWeuiSuccessToast(
-                        context: context, message: Text("扫描成功:" + value),closeDuration:Duration(milliseconds: 500));
-                    return true;
-                  },
-                  viewSize: viewSize,
-                  scanRect: scanRect),
               Positioned(
                 top: 0.0,
                 left: 0.0,
@@ -96,13 +86,13 @@ class _MyAppState extends State<MyApp> {
                   color: Colors.red,
                   onPressed: () async {
                     var image = await ImagePicker.pickImage(source: ImageSource.camera);
-                    var value = await Fqreader.decodeImg(image, [ScanType.ALL]);
-                    if(value == null){
+                    var result = await Fqreader.decodeImg(image, [ScanType.ALL]);
+                    if(result == null){
                       showWeuiSuccessToast(
                           context: context, message: Text("未扫描到数据"),closeDuration:Duration(milliseconds: 3000));
                     }else{
                       showWeuiSuccessToast(
-                          context: context, message: Text("扫描成功:" + value),closeDuration:Duration(milliseconds: 500));
+                          context: context, message: Text("扫描成功:" + result.data),closeDuration:Duration(milliseconds: 500));
                     }
                   },
                 ),

@@ -78,6 +78,11 @@ public class ScanView {
     }
 
     void startScan() {
+        try {
+            mCamera.reconnect();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         mCamera.setOneShotPreviewCallback(mDecodeHandler);
         mCamera.startPreview();
         ;

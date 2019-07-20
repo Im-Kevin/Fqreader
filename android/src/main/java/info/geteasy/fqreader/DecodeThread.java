@@ -139,7 +139,7 @@ public class DecodeThread extends Thread {
                 if (rawResult != null) {
                     Message msg = new Message();
                     msg.what = 2;
-                    msg.obj = rawResult.getText();
+                    msg.obj = mDecode.toFlutterMap(rawResult);
                     this.mDecodeHandler.sendMessage(msg);
                 } else {
                     Message msg = new Message();

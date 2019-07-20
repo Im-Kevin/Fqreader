@@ -1,5 +1,6 @@
 library fqreader;
 
+
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
@@ -9,14 +10,15 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+part "scan_view.dart";
 
-typedef ScanEvent = Future<bool> Function(String value);
+typedef ScanEvent = Future<bool> Function(ScanResult value);
 
 class Fqreader {
   static const MethodChannel _channel =
   const MethodChannel('fqreader');
 
-  static Future<String> decodeImg(File file,List<ScanType> scanType) async{
+  static Future<ScanResult> decodeImg(File file,List<ScanType> scanType) async{
     var scanStr = new List<String>();
     scanType.forEach((item){
       scanStr.add(item.toString());
@@ -25,10 +27,17 @@ class Fqreader {
     List<int> data = file.readAsBytesSync();
     Uint8List uData = new Uint8List.fromList(data);
 
-    return await  _channel.invokeMethod('decodeImg',{
+    var result = await  _channel.invokeMethod('decodeImg',{
       "image": uData,
       "scanType": scanStr
     });
+    if(result == null)
+      return null;
+
+    return ScanResult(
+      scanType: _parseScanType(result['scanType']),
+      data: result['data'],
+    );
   }
 
   static Future<int> _initView({
@@ -43,7 +52,7 @@ class Fqreader {
     });
 
     final int textureId = await _channel.invokeMethod('initView',{
-      "viewRect":{
+      "viewSize":{
         "width":(viewSize.width* devicePixelRatio).toInt(),
         "height":(viewSize.height* devicePixelRatio).toInt(),
       },
@@ -75,142 +84,10 @@ class Fqreader {
   }
 }
 
-
-class ScanView extends StatefulWidget{
-  /**
-   * 扫描事件
-   */
-  final ScanEvent onScan;
-
-  /**
-   * 扫描区域大小
-   */
-  final Rect scanRect;
-
-  /**
-   * ScanView控件大小
-   */
-  final Size viewSize;
-
-  /**
-   * 是否立即扫描
-   */
-  final bool autoScan;
-
-  /**
-   * 是否连续扫描
-   */
-  final bool continuityScan;
-
-  /**
-   * 连续扫描间隔
-   */
-  final Duration scanInterval;
-
-  /**
-   *  扫描的条码类型
-   */
-  final List<ScanType> scanType;
-
-  const ScanView({
-      Key key,
-      this.onScan,
-      @required this.viewSize,
-      @required this.scanRect,
-      this.scanType = const [ScanType.ALL],
-      this.autoScan = true,
-      this.continuityScan = false,
-      this.scanInterval = const Duration(milliseconds:500)})
-    : super(key:key);
-
-  @override
-  State<StatefulWidget> createState() =>ScanViewState();
-}
-
-class ScanViewState extends State<ScanView>{
-  int _textureId;
-  StreamSubscription _readySubscription;
-  @override
-  void initState() {
-    // TODO: implement initState
-    super.initState();
-    MediaQueryData mediaQuery = MediaQueryData.fromWindow(ui.window);
-    Fqreader._initView(
-        viewSize: widget.viewSize,
-        scanRect:widget.scanRect,
-        devicePixelRatio:mediaQuery.devicePixelRatio,
-        scanType: widget.scanType
-    ).then((textureId){
-      setState(() {
-        _textureId = textureId;
-      });
-      if(widget.autoScan){
-        Fqreader._startScan();
-      }
-      _readySubscription = new EventChannel('fqreader/scanEvents$_textureId')
-          .receiveBroadcastStream()
-          .listen(_listener);
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return _textureId != null
-        ? new Texture(textureId: _textureId)
-        : new Container();
-  }
-
-  @override
-  void dispose(){
-    super.dispose();
-    _readySubscription.cancel();
-    Fqreader._release();
-  }
-
-  /**
-   * 开始扫描
-   */
-  Future startScan() async{
-    await Fqreader._startScan();
-  }
-
-  /**
-   * 暂停扫描
-   */
-  Future stopScan() async{
-    await Fqreader._stopScan();
-  }
-  /**
-   * 开灯
-   */
-  Future turnOn() async{
-    await Fqreader._turnOn();
-  }
-  /**
-   * 关灯
-   */
-  Future turnOff() async{
-    await Fqreader._turnOff();
-  }
-
-  void _listener(dynamic value) {
-    if(widget != null)
-      {
-        if(!widget.continuityScan) //是否连续扫描
-          {
-            Fqreader._stopScan();
-          }
-        widget.onScan(value).then((result){
-          if(widget.continuityScan && result){
-            Future.delayed(widget.scanInterval,(){
-              Fqreader._startScan();
-            });
-          }else{
-            Fqreader._stopScan();
-          }
-        });
-      }
-  }
+class ScanResult{
+  final String data;
+  final ScanType scanType;
+  const ScanResult({this.data,this.scanType});
 }
 
 enum ScanType{
@@ -261,5 +138,35 @@ enum ScanType{
   /**
    * PDF417条码是一种高密度、高信息含量的便携式数据文件
    */
-  PDF_417
+  PDF_417,
+}
+
+ScanType _parseScanType(String str){
+  switch(str){
+    case 'ScanType.ALL':
+      return ScanType.ALL;
+    case 'ScanType.QR_CODE':
+      return ScanType.QR_CODE;
+    case 'ScanType.AZTEC':
+      return ScanType.AZTEC;
+    case 'ScanType.CODABAR':
+      return ScanType.CODABAR;
+    case 'ScanType.CODE_39':
+      return ScanType.CODE_39;
+    case 'ScanType.CODE_93':
+      return ScanType.CODE_93;
+    case 'ScanType.CODE_128':
+      return ScanType.CODE_128;
+    case 'ScanType.EAN8':
+      return ScanType.EAN8;
+    case 'ScanType.EAN13':
+      return ScanType.EAN13;
+    case 'ScanType.ITF':
+      return ScanType.ITF;
+    case 'ScanType.DATA_MATRIX':
+      return ScanType.DATA_MATRIX;
+    case 'ScanType.PDF_417':
+      return ScanType.PDF_417;
+  }
+  return null;
 }

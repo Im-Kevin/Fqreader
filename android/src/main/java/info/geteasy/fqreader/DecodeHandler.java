@@ -33,7 +33,7 @@ public class DecodeHandler extends Handler implements  Camera.PreviewCallback {
                 break;
             case 2: //停止扫描
                 if(eventSink != null)
-                    eventSink.success((String) msg.obj);
+                    eventSink.success(msg.obj);
                 break;
         }
     }

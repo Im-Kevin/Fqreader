@@ -1,5 +1,6 @@
 package info.geteasy.fqreader;
 
+import com.google.zxing.BarcodeFormat;
 import com.google.zxing.BinaryBitmap;
 import com.google.zxing.ChecksumException;
 import com.google.zxing.DecodeHintType;
@@ -21,6 +22,7 @@ import com.google.zxing.pdf417.PDF417Reader;
 import com.google.zxing.qrcode.QRCodeReader;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
@@ -111,11 +113,54 @@ public class MultipleDecode implements Reader {
         }
     }
 
+    public Map<String,String> toFlutterMap(Result result){
+        Map<String,String> mapResult = new HashMap<>();
+        mapResult.put("data",result.getText());
+        BarcodeFormat format = result.getBarcodeFormat();
+        switch(format){
+            case QR_CODE:
+                mapResult.put("scanType","ScanType.QR_CODE");
+                break;
+            case AZTEC:
+                mapResult.put("scanType","ScanType.AZTEC");
+                break;
+            case CODABAR:
+                mapResult.put("scanType","ScanType.CODABAR");
+                break;
+            case CODE_39:
+                mapResult.put("scanType","ScanType.CODE_39");
+                break;
+            case CODE_93:
+                mapResult.put("scanType","ScanType.CODE_93");
+                break;
+            case CODE_128:
+                mapResult.put("scanType","ScanType.CODE_128");
+                break;
+            case EAN_8:
+                mapResult.put("scanType","ScanType.EAN8");
+                break;
+            case EAN_13:
+                mapResult.put("scanType","ScanType.EAN13");
+                break;
+            case ITF:
+                mapResult.put("scanType","ScanType.ITF");
+                break;
+            case DATA_MATRIX:
+                mapResult.put("scanType","ScanType.DATA_MATRIX");
+                break;
+            case PDF_417:
+                mapResult.put("scanType","ScanType.PDF_417");
+                break;
+        }
+        return mapResult;
+    }
+
     private Result decodeInternal(BinaryBitmap image) throws NotFoundException {
         if (mReaders != null) {
             for (Reader reader : mReaders) {
                 try {
                     return reader.decode(image, mHints);
+
                 } catch (ReaderException re) {
                     // continue
                 }

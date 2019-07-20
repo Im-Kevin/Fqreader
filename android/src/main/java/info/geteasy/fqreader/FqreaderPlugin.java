@@ -73,13 +73,13 @@ public class FqreaderPlugin implements MethodCallHandler {
                     result.error("ScanView", "Scan Already initialized", null);
                     return;
                 }
-                HashMap<String, Object> viewRectMap = call.argument("viewRect");
-                int viewWidth = (int )viewRectMap.get("width");
+                HashMap<String, Object> viewRectMap = call.argument("viewSize");
+                int viewWidth = (int) viewRectMap.get("width");
                 int viewHeight = (int) viewRectMap.get("height");
 
                 HashMap<String, Object> scanRectMap = call.argument("scanRect");
                 Rect scanRect = new Rect(
-                        (int) scanRectMap.get("width"),
+                        (int) scanRectMap.get("left"),
                         (int) scanRectMap.get("top"),
                         (int) scanRectMap.get("right"),
                         (int) scanRectMap.get("bottom")
@@ -135,11 +135,9 @@ public class FqreaderPlugin implements MethodCallHandler {
         com.google.zxing.Result scanResult = null;
         try {
             scanResult = decode.decode(bitmap);
-            result.success(scanResult.getText());
         } catch (NotFoundException ignored) {
 
         } catch (Exception e){
-            result.error(e.getClass().getName(),e.getLocalizedMessage(),e);
         }
         finally {
             decode.reset();
@@ -149,16 +147,17 @@ public class FqreaderPlugin implements MethodCallHandler {
             bitmap = new BinaryBitmap(new HybridBinarizer(invertedSource));
             try {
                 scanResult = decode.decode(bitmap);
-
             } catch (NotFoundException ignored) {
             } catch (Exception e){
-                result.error(e.getClass().getName(),e.getLocalizedMessage(),e);
             }
             finally {
                 decode.reset();
             }
         }
         if(scanResult != null){
+            result.success(decode.toFlutterMap((scanResult)));
+        }else{
+            result.success(null);
         }
     }
 
