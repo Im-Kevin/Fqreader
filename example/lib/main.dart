@@ -42,13 +42,21 @@ class _MyAppState extends State<MyApp> {
           ),
           body: Stack(
             children: <Widget>[
+              ScanView(
+                scanRect: scanRect, 
+                viewSize: viewSize,
+                onScan: (data) async{
+                  print(data);
+                  return false;
+                },
+              ),
               Positioned(
                 top: 0.0,
                 left: 0.0,
                 child: FlatButton(
                   child: Text("启动扫描"),
                   color: Colors.red,
-                  onPressed: () => scanView.currentState.startScan(),
+                  onPressed: () => scanView.currentState?.startScan(),
                 ),
               ),
               Positioned(
