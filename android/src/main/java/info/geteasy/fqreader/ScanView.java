@@ -21,6 +21,7 @@ import com.google.zxing.common.HybridBinarizer;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
@@ -46,7 +47,6 @@ public class ScanView {
              PluginRegistry.Registrar registrar,
              int viewWidth,
              int viewHeight,
-             Rect scanRect,
              List<String> scanType,
              MethodChannel.Result result) {
         try {
@@ -65,16 +65,24 @@ public class ScanView {
             //链接flutter纹理
             this.textureEntry = view.createSurfaceTexture();
             mCamera.setPreviewTexture(textureEntry.surfaceTexture());
-
+            
+            HashMap<String, Object> resultMap = new HashMap<String, Object>();
+            resultMap.put("textureID", textureEntry.id());
+            resultMap.put("cameraWidth", currentSize.width);
+            resultMap.put("cameraHeight", currentSize.height);
             //返回纹理ID
-            result.success(textureEntry.id());
+            result.success(resultMap);
 
-            mDecodeHandler = new DecodeHandler(mCamera, scanType, scanRect);
+            mDecodeHandler = new DecodeHandler(mCamera, scanType);
             mDecodeHandler.registerEventChannel(registrar, textureEntry.id());
 
         } catch (Exception e) {
             result.error("ScanView init", e.getMessage(), null);
         }
+    }
+
+    void setScanRect(Rect scanRect){
+        mDecodeHandler.setScanRect(scanRect);
     }
 
     void startScan() {

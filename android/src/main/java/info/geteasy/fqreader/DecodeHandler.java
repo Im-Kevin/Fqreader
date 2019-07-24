@@ -15,13 +15,11 @@ public class DecodeHandler extends Handler implements  Camera.PreviewCallback {
     private DecodeThread mThread;
     private EventChannel.EventSink eventSink;
     DecodeHandler(Camera camera,
-                  List<String> scanType,
-                  Rect scanRect){
+                  List<String> scanType){
         mCamera = camera;
-        mThread = new DecodeThread(this,mCamera,scanRect);
+        mThread = new DecodeThread(this,mCamera);
         mThread.setFormats(scanType);
         mThread.start();
-
     }
 
     @Override
@@ -67,5 +65,9 @@ public class DecodeHandler extends Handler implements  Camera.PreviewCallback {
                                 DecodeHandler.this.eventSink = null;
                             }
                         });
+    }
+
+    void setScanRect(Rect scanRect){
+        mThread.setScanRect(scanRect);
     }
 }

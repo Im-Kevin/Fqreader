@@ -8,6 +8,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 part "scan_view.dart";
@@ -40,9 +41,8 @@ class Fqreader {
     );
   }
 
-  static Future<int> _initView({
+  static Future<InitResult> _initView({
       @required Size viewSize,
-      @required Rect scanRect,
       @required List<ScanType> scanType,
       double devicePixelRatio
   }) async {
@@ -51,20 +51,29 @@ class Fqreader {
       scanStr.add(item.toString());
     });
 
-    final int textureId = await _channel.invokeMethod('initView',{
+    final Map<dynamic,dynamic> result = await _channel.invokeMethod('initView',{
       "viewSize":{
         "width":(viewSize.width* devicePixelRatio).toInt(),
         "height":(viewSize.height* devicePixelRatio).toInt(),
       },
-      "scanRect":{
-        "left":(scanRect.left* devicePixelRatio).toInt(),
-        "top":(scanRect.top* devicePixelRatio).toInt(),
-        "right":(scanRect.right* devicePixelRatio).toInt(),
-        "bottom":(scanRect.bottom* devicePixelRatio).toInt(),
-      },
       "scanType": scanStr
     });
-    return textureId;
+    
+    return InitResult(
+      cameraSize: Size(result['cameraHeight'] / devicePixelRatio, result['cameraWidth']  / devicePixelRatio),
+      textureID: result['textureID']
+    );
+  }
+  static Future _setScanRect(
+      Rect scanRect,
+      double devicePixelRatio) async{
+    await _channel.invokeMethod('setScanRect',{
+    "scanRect":{
+    "left":(scanRect.left* devicePixelRatio).toInt(),
+    "top":(scanRect.top* devicePixelRatio).toInt(),
+    "right":(scanRect.right* devicePixelRatio).toInt(),
+    "bottom":(scanRect.bottom* devicePixelRatio).toInt(),
+    }});
   }
   static Future _startScan() async{
     await _channel.invokeMethod('startScan');
@@ -82,6 +91,12 @@ class Fqreader {
   static Future _release() async{
     await _channel.invokeMethod("release");
   }
+}
+
+class InitResult{
+  final Size cameraSize;
+  final int textureID;
+  const InitResult({this.cameraSize,this.textureID});
 }
 
 class ScanResult{

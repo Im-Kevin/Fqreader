@@ -6,7 +6,7 @@ Usage
 Add this to your package's pubspec.yaml file:
 ``` yaml
 dependencies:
-  fqreader: "^0.0.1"
+  fqreader: "^0.0.2"
 ```
 
 ## Fqreader
@@ -25,13 +25,17 @@ dependencies:
 
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
-| [onScan] | <code>ScanEvent<Widget></code>  | | 扫描后返回的事件 |
-| [viewSize] | <code>Size<Widget></code>  | | 空间的大小|
-| [scanRect] | <code>Rect<Widget></code>|  | 扫描框的位置与大小|
-| [[scanType](#ScanType)] | <code>List<ScanType><Widget></code> | ScanType.ALL| 扫描的类型,默认全部类型 |
-| [autoScan] | <code>bool<Widget></code>  | true | 是否自动开始扫描 |
-| [continuityScan] | <code>bool<Widget></code>  | false | 是否连续扫描 |
-| [scanInterval] | <code>Duration<Widget></code>  | 0.5s | 连续扫描间隔 |
+| [onScan] | <code>ScanEvent</code> | | 扫描事件 |
+| [scanSize] | <code>Size</code> | | 扫描区域大小 |
+| [pictureSize] | <code>Size</code> | | 预览图片大小 |
+| [viewSize] | <code>Size</code> | | ScanView控件大小 |
+| [scanAilgn] | <code>Alignment</code> | | 扫描框的位置(位于图片) |
+| [viewAilgn] | <code>Alignment</code> | | view的位置(位于图片) |
+| [autoScan] | <code>bool</code> | true | 是否立即扫描 |
+| [continuityScan] | <code>bool</code> | false | 是否连续扫描 |
+| [scanInterval] | <code>Duration</code> |  0.5s  | 连续扫描间隔 |
+| [scanType] | <code>List<ScanType></code> | ScanType.ALL |  扫描的条码类型 |
+| [devicePixelRatio] | <code>double</code> | | 屏幕分辨率 |
 
 ## ScanViewState
 

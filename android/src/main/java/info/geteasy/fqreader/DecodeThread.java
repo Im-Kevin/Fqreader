@@ -47,9 +47,7 @@ public class DecodeThread extends Thread {
 
     DecodeThread(
             Handler decodeHandler,
-            Camera camera,
-            Rect scanRect) {
-        this.mScanRect = scanRect;
+            Camera camera) {
         this.mCamera = camera;
         this.mCameraSize = camera.getParameters().getPreviewSize();
         this.mDecodeHandler = decodeHandler;
@@ -101,12 +99,12 @@ public class DecodeThread extends Thread {
                     height = tmp;
                 }
                 data = getRotatedData(data, mCamera);
-
+                Rect scanRect = mScanRect == null? new Rect(0,0,width,height):mScanRect;
                 com.google.zxing.Result rawResult = null;
                 LuminanceSource source = new PlanarYUVLuminanceSource(data,
                         width, height,
-                        mScanRect.left, mScanRect.top,
-                        mScanRect.width(), mScanRect.height(),
+                        scanRect.left, scanRect.top,
+                        scanRect.width(), scanRect.height(),
                         false);
 
                 BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
@@ -184,5 +182,9 @@ public class DecodeThread extends Thread {
 
     public int getRotationCount() {
         return 1;
+    }
+
+    public void setScanRect(Rect scanRect) {
+        this.mScanRect = scanRect;
     }
 }
