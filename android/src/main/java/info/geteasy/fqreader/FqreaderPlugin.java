@@ -73,14 +73,8 @@ public class FqreaderPlugin implements MethodCallHandler {
                     result.error("ScanView", "Scan Already initialized", null);
                     return;
                 }
-                HashMap<String, Object> viewRectMap = call.argument("viewSize");
-                int viewWidth = (int) viewRectMap.get("width");
-                int viewHeight = (int) viewRectMap.get("height");
-
                 List<String> scanType = call.argument("scanType");
                 scanView = new ScanView(view, registrar,
-                        viewWidth,
-                        viewHeight,
                         scanType,
                         result);
                 break;
@@ -112,8 +106,14 @@ public class FqreaderPlugin implements MethodCallHandler {
                 result.success(null);
                 break;
             case "release":
-                scanView.release();
-                scanView = null;
+                if(scanView != null){
+                    synchronized(scanView){
+                        if(scanView != null) {
+                            scanView.release();
+                            scanView = null;
+                        }
+                    }
+                }
                 break;
             case "decodeImg":
                 decodeImg(call, result);

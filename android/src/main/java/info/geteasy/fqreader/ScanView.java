@@ -1,11 +1,13 @@
 package info.geteasy.fqreader;
 
+import android.content.Context;
 import android.content.res.Configuration;
 import android.graphics.Rect;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.os.Handler;
 import android.os.Message;
+import android.util.DisplayMetrics;
 import android.util.Log;
 
 import com.google.zxing.BarcodeFormat;
@@ -45,8 +47,6 @@ public class ScanView {
 
     ScanView(FlutterView view,
              PluginRegistry.Registrar registrar,
-             int viewWidth,
-             int viewHeight,
              List<String> scanType,
              MethodChannel.Result result) {
         try {
@@ -54,9 +54,10 @@ public class ScanView {
             Camera.Parameters param = mCamera.getParameters();
             param.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
             param.setRotation(90);
-
+            Context context = view.getContext();
+            DisplayMetrics dm = context.getResources().getDisplayMetrics();
             // 选择最合适的预览图像大小
-            Camera.Size currentSize = matchSize(viewWidth,viewHeight, param);
+            Camera.Size currentSize = matchSize(dm.heightPixels, dm.widthPixels, param);
             // 设置预览图像大小
             param.setPreviewSize(currentSize.width, currentSize.height);
             mCamera.setParameters(param);
@@ -120,11 +121,14 @@ public class ScanView {
     }
 
     void release() {
-        mCamera.release();
-        mCamera = null;
+        mDecodeHandler.release();
         textureEntry.release();
         textureEntry = null;
-        mDecodeHandler.release();
+        mCamera.setPreviewCallback(null);
+        mCamera.stopPreview();
+        mCamera.lock();
+        mCamera.release();
+        mCamera = null;
     }
 
     /**
@@ -150,7 +154,7 @@ public class ScanView {
             double diffOld = Math.abs(currentRatio - viewRatio); //与控件比例的差异 旧
             double diffNew = Math.abs(item.width * 1.0 / item.height - viewRatio);  //与控件比例的差异 新
 
-            if (diffOld < diffNew) { //如果旧的小于新的则使用新的预览大小
+            if (diffOld > diffNew) { //如果旧的小于新的则使用新的预览大小
                 currentSize = item;
                 currentRatio = item.width * 1.0 / item.height;
             } else if (diffOld == diffNew) {

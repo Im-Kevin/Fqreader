@@ -6,7 +6,7 @@ Usage
 Add this to your package's pubspec.yaml file:
 ``` yaml
 dependencies:
-  fqreader: "^0.0.2"
+  fqreader: "^0.1.3"
 ```
 
 ## Fqreader
@@ -26,8 +26,8 @@ dependencies:
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
 | [onScan] | <code>ScanEvent</code> | | 扫描事件 |
-| [scanSize] | <code>Size</code> | | 扫描区域大小 |
-| [pictureSize] | <code>Size</code> | | 预览图片大小 |
+| [scanRect] | <code>Rect</code> | | 扫描区域位置大小, scanRect和scanSize 只能用一个 |
+| [scanSize] | <code>Size</code> | | 扫描区域大小, scanRect和scanSize 只能用一个 |
 | [viewSize] | <code>Size</code> | | ScanView控件大小 |
 | [scanAilgn] | <code>Alignment</code> | | 扫描框的位置(位于图片) |
 | [viewAilgn] | <code>Alignment</code> | | view的位置(位于图片) |

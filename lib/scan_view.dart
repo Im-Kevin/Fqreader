@@ -7,20 +7,17 @@ class ScanView extends StatefulWidget {
   final ScanEvent onScan;
 
   /**
+   * 扫描区域位置大小
+   */
+  final Rect scanRect;
+  /**
    * 扫描区域大小
    */
   final Size scanSize;
-
-
-  /**
-   * 图片大小
-   */
-  final Size pictureSize;
   /**
    * ScanView控件大小
    */
   final Size viewSize;
-
 
   /**
    * 扫描框的位置(位于图片)
@@ -36,6 +33,8 @@ class ScanView extends StatefulWidget {
    * 屏幕分辨率
    */
   final double devicePixelRatio;
+
+  final Color maskColor;
 
   /**
    * 是否立即扫描
@@ -61,16 +60,19 @@ class ScanView extends StatefulWidget {
       {Key key,
       this.onScan,
       @required this.viewSize,
-      @required this.pictureSize,
-      @required this.scanSize,
+      this.scanRect,
+      this.scanSize,
       this.scanAilgn = Alignment.topLeft,
       this.viewAilgn = Alignment.topLeft,
       @required this.devicePixelRatio,
+      this.maskColor,
       this.scanType = const [ScanType.ALL],
       this.autoScan = true,
       this.continuityScan = false,
       this.scanInterval = const Duration(milliseconds: 500)})
-      : super(key: key);
+      : assert(scanSize != null || scanRect != null),
+        assert(!(scanSize != null && scanRect != null)),
+        super(key: key);
 
   @override
   State<StatefulWidget> createState() => ScanViewState();
@@ -85,7 +87,7 @@ class ScanViewState extends State<ScanView> {
   void initState() {
     // TODO: implement initState
     super.initState();
-    if(widget.autoScan){
+    if (widget.autoScan) {
       this.startScan();
     }
   }
@@ -96,24 +98,26 @@ class ScanViewState extends State<ScanView> {
         ? new _ScanViewTexture(
             textureId: _textureId,
             cameraSize: _cameraSize,
-            viewRect: _getViewRect(_cameraSize, widget.viewSize, widget.viewAilgn),
+            scanRect: widget.scanRect ??
+              _getViewRect(_cameraSize, widget.scanSize, widget.scanAilgn),
+            maskColor: widget.maskColor,
+            viewRect:
+                _getViewRect(_cameraSize, widget.viewSize, widget.viewAilgn),
           )
-        : new Container();
+        : new SizedBox(
+            width: widget.viewSize.width, height: widget.viewSize.height);
   }
 
-  Rect _getViewRect(Size cameraSize, Size viewSize, Alignment alignment)
-  {
+  Rect _getViewRect(Size cameraSize, Size viewSize, Alignment alignment) {
     var offset = cameraSize - viewSize;
     return alignment.alongOffset(offset) & viewSize;
   }
-
 
   @override
   void deactivate() {
     // TODO: implement deactivate
     super.deactivate();
-    _readySubscription.cancel();
-    Fqreader._release();
+    this.release();
   }
 
   /**
@@ -122,18 +126,18 @@ class ScanViewState extends State<ScanView> {
   Future startScan() async {
     if (this._textureId == null) {
       var initResult = await Fqreader._initView(
-          viewSize: widget.pictureSize,
           devicePixelRatio: widget.devicePixelRatio,
           scanType: widget.scanType);
       _cameraSize = initResult.cameraSize;
       _textureId = initResult.textureID;
-      Fqreader._setScanRect(_getViewRect(_cameraSize, widget.scanSize, widget.scanAilgn), widget.devicePixelRatio);
+      Fqreader._setScanRect(
+          widget.scanRect ??
+              _getViewRect(_cameraSize, widget.scanSize, widget.scanAilgn),
+          widget.devicePixelRatio);
       _readySubscription = new EventChannel('fqreader/scanEvents$_textureId')
           .receiveBroadcastStream()
           .listen(_listener);
-      setState(() {
-        
-      });
+      setState(() {});
     }
     await Fqreader._startScan();
   }
@@ -160,8 +164,14 @@ class ScanViewState extends State<ScanView> {
   }
 
   Future release() async {
-    this._textureId = null;
-    Fqreader._release();
+    if (this._textureId != null) {
+      this._textureId = null;
+      try {
+        setState(() {});
+      } catch (_) {}
+      await _readySubscription.cancel();
+      await Fqreader._release();
+    }
   }
 
   void _listener(dynamic value) {
@@ -191,14 +201,18 @@ class ScanViewState extends State<ScanView> {
 class _ScanViewTexture extends LeafRenderObjectWidget {
   final Size cameraSize;
   final Rect viewRect;
+  final Rect scanRect;
+  final Color maskColor;
 
   /// Creates a widget backed by the texture identified by [textureId].
-  const _ScanViewTexture({
-    Key key,
-   @required  this.cameraSize,
-   @required  this.viewRect,
-    @required this.textureId,
-  })  : assert(textureId != null),
+  const _ScanViewTexture(
+      {Key key,
+      @required this.cameraSize,
+      @required this.viewRect,
+      @required this.textureId,
+      this.scanRect,
+      this.maskColor})
+      : assert(textureId != null),
         super(key: key);
 
   /// The identity of the backend texture.
@@ -206,26 +220,36 @@ class _ScanViewTexture extends LeafRenderObjectWidget {
 
   @override
   _ScanViewTextureBox createRenderObject(BuildContext context) =>
-      _ScanViewTextureBox(textureId: textureId, cameraSize: cameraSize, viewRect: viewRect);
+      _ScanViewTextureBox(
+          textureId: textureId, cameraSize: cameraSize, viewRect: viewRect);
 
   @override
   void updateRenderObject(
       BuildContext context, _ScanViewTextureBox renderObject) {
     renderObject.textureId = textureId;
+    renderObject.maskColor = maskColor;
     renderObject.cameraSize = cameraSize;
     renderObject.viewRect = viewRect;
+    renderObject.scanRect = scanRect;
   }
 }
 
 class _ScanViewTextureBox extends RenderBox {
   /// Creates a box backed by the texture identified by [textureId].
-  _ScanViewTextureBox({@required int textureId, @required Size cameraSize,@required  Rect viewRect})
+  _ScanViewTextureBox(
+      {@required int textureId,
+      @required Size cameraSize,
+      @required Rect viewRect,
+      Rect scanRect,
+      Color maskColor})
       : assert(textureId != null),
-       assert(viewRect != null),
-       assert(cameraSize != null),
+        assert(viewRect != null),
+        assert(cameraSize != null),
         _textureId = textureId,
         _cameraSize = cameraSize,
-        _viewRect = viewRect;
+        _viewRect = viewRect,
+        _scanRect = scanRect,
+        _maskColor = maskColor;
 
   /// The identity of the backend texture.
   int get textureId => _textureId;
@@ -257,6 +281,25 @@ class _ScanViewTextureBox extends RenderBox {
       markNeedsPaint();
     }
   }
+
+  Rect get scanRect => _scanRect;
+  Rect _scanRect;
+  set scanRect(Rect value) {
+    if (value != _scanRect) {
+      _scanRect = value;
+      markNeedsPaint();
+    }
+  }
+
+  Color get maskColor => _maskColor;
+  Color _maskColor;
+  set maskColor(Color value) {
+    if (value != _maskColor) {
+      _maskColor = value;
+      markNeedsPaint();
+    }
+  }
+
   @override
   bool get sizedByParent => true;
 
@@ -277,19 +320,31 @@ class _ScanViewTextureBox extends RenderBox {
   @override
   void paint(PaintingContext context, Offset offset) {
     if (_textureId == null) return;
-    // context.addLayer(TextureLayer(
-    //   rect: Rect.fromLTWH(offset.dx, offset.dy, _viewSize.width, _viewSize.height),
-    //   textureId: _textureId,
-    // ));
-    print(_cameraSize);
-    context.pushClipRect(
-        needsCompositing, offset, viewRect,
+    var cameraSize = Size(viewRect.width, viewRect.width * (_cameraSize.height / _cameraSize.width));
+    context.pushClipRect(needsCompositing, offset,
+        Rect.fromLTWH(0, 0, viewRect.width, viewRect.height),
         (PaintingContext context, Offset offset) {
       context.addLayer(TextureLayer(
-        rect: Rect.fromLTWH(
-            offset.dx, offset.dy, _cameraSize.width, _cameraSize.height),
+        rect: Rect.fromLTWH(offset.dx - viewRect.left, offset.dy - viewRect.top,
+            cameraSize.width, cameraSize.height),
         textureId: _textureId,
       ));
+      Paint paint = Paint()..color = maskColor;
+      if (maskColor != null) {
+        context.canvas
+            .drawRect(Rect.fromLTWH(0, 0, viewRect.width, scanRect.top), paint);
+        context.canvas.drawRect(
+            Rect.fromLTWH(0, scanRect.top, scanRect.left, scanRect.height),
+            paint);
+        context.canvas.drawRect(
+            Rect.fromLTWH(0, scanRect.bottom, viewRect.width,
+                viewRect.height - scanRect.bottom),
+            paint);
+        context.canvas.drawRect(
+            Rect.fromLTWH(scanRect.right, scanRect.top,
+                viewRect.width - scanRect.right, scanRect.height),
+            paint);
+      }
     });
   }
 }

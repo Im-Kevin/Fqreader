@@ -14,6 +14,7 @@ public class DecodeHandler extends Handler implements  Camera.PreviewCallback {
     private Camera mCamera;
     private DecodeThread mThread;
     private EventChannel.EventSink eventSink;
+    private boolean mRelease;
     DecodeHandler(Camera camera,
                   List<String> scanType){
         mCamera = camera;
@@ -25,6 +26,9 @@ public class DecodeHandler extends Handler implements  Camera.PreviewCallback {
     @Override
     public void handleMessage(Message msg) {
         super.handleMessage(msg);
+        if(mRelease){
+            return;
+        }
         switch (msg.what){
             case 1://继续扫描
                 mCamera.setOneShotPreviewCallback(DecodeHandler.this);
@@ -45,6 +49,7 @@ public class DecodeHandler extends Handler implements  Camera.PreviewCallback {
      * 释放资源
      */
     void release(){
+        mRelease = true;
         mThread.release();
     }
     /**

@@ -7,6 +7,7 @@ import 'dart:typed_data';
 
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -42,7 +43,6 @@ class Fqreader {
   }
 
   static Future<InitResult> _initView({
-      @required Size viewSize,
       @required List<ScanType> scanType,
       double devicePixelRatio
   }) async {
@@ -52,10 +52,6 @@ class Fqreader {
     });
 
     final Map<dynamic,dynamic> result = await _channel.invokeMethod('initView',{
-      "viewSize":{
-        "width":(viewSize.width* devicePixelRatio).toInt(),
-        "height":(viewSize.height* devicePixelRatio).toInt(),
-      },
       "scanType": scanStr
     });
     
