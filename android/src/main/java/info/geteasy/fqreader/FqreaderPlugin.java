@@ -24,6 +24,12 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 
+import info.geteasy.fqreader.factory.ZBarFactory;
+import info.geteasy.fqreader.view.FqreaderPlatformView;
+import io.flutter.embedding.engine.plugins.FlutterPlugin;
+import io.flutter.embedding.engine.plugins.activity.ActivityAware;
+import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding;
+import io.flutter.plugin.common.BinaryMessenger;
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
@@ -35,18 +41,26 @@ import io.flutter.view.TextureRegistry;
 /**
  * FqreaderPlugin
  */
-public class FqreaderPlugin implements MethodCallHandler {
+public class FqreaderPlugin implements MethodCallHandler, FlutterPlugin, ActivityAware {
 
+    private static final String CHANNEL_VIEW_NAME = "info.geteasy.fqreader_view";
 
-    private FlutterView view;
+    private static FlutterPluginBinding flutterPluginBinding;
+    private static MethodChannel channel;
+
+    private TextureRegistry textureRegistry;
     private Activity activity;
-    private Registrar registrar;
+    private BinaryMessenger messenger;
 
     private ScanView scanView;
 
-    private FqreaderPlugin(Registrar registrar, FlutterView view, Activity activity) {
-        this.registrar = registrar;
-        this.view = view;
+    public FqreaderPlugin(){}
+
+    private FqreaderPlugin(
+            BinaryMessenger messenger,
+            TextureRegistry textureRegistry, Activity activity) {
+        this.messenger = messenger;
+        this.textureRegistry = textureRegistry;
         this.activity = activity;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (activity.checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
@@ -59,10 +73,11 @@ public class FqreaderPlugin implements MethodCallHandler {
      * Plugin registration.
      */
     public static void registerWith(Registrar registrar) {
-        final MethodChannel channel = new MethodChannel(registrar.messenger(), "fqreader");
+        channel = new MethodChannel(registrar.messenger(), "fqreader");
 
         channel.setMethodCallHandler(
-                new FqreaderPlugin(registrar, registrar.view(), registrar.activity()));
+                new FqreaderPlugin(registrar.messenger(), registrar.view(), registrar.activity()));
+        registrar.platformViewRegistry().registerViewFactory(CHANNEL_VIEW_NAME, new ZBarFactory(registrar));
     }
 
     @Override
@@ -74,7 +89,7 @@ public class FqreaderPlugin implements MethodCallHandler {
                     return;
                 }
                 List<String> scanType = call.argument("scanType");
-                scanView = new ScanView(view, registrar,
+                scanView = new ScanView(textureRegistry, messenger, activity,
                         scanType,
                         result);
                 break;
@@ -164,4 +179,33 @@ public class FqreaderPlugin implements MethodCallHandler {
         }
     }
 
+    @Override
+    public void onAttachedToEngine(FlutterPluginBinding flutterPluginBinding) {
+        this.flutterPluginBinding = flutterPluginBinding;
+    }
+
+    @Override
+    public void onDetachedFromEngine(FlutterPluginBinding flutterPluginBinding) {
+        this.flutterPluginBinding = null;
+    }
+
+    @Override
+    public void onAttachedToActivity(ActivityPluginBinding activityPluginBinding) {
+        channel = new MethodChannel(flutterPluginBinding.getFlutterEngine().getDartExecutor(), "fqreader");
+        channel.setMethodCallHandler(new FqreaderPlugin(flutterPluginBinding.getFlutterEngine().getDartExecutor(), flutterPluginBinding.getFlutterEngine().getRenderer(), activityPluginBinding.getActivity()));
+    }
+
+    @Override
+    public void onDetachedFromActivityForConfigChanges() {
+        onDetachedFromActivity();
+    }
+
+    @Override
+    public void onReattachedToActivityForConfigChanges(ActivityPluginBinding activityPluginBinding) {
+        onAttachedToActivity(activityPluginBinding);
+    }
+
+    @Override
+    public void onDetachedFromActivity() {
+    }
 }

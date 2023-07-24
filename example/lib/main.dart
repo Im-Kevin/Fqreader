@@ -1,11 +1,10 @@
+import 'package:cool_ui/cool_ui.dart';
+import 'package:flustars/flustars.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 
-import 'package:flutter/services.dart';
 import 'package:fqreader/fqreader.dart';
-import 'package:flustars/flustars.dart';
-import 'package:cool_ui/cool_ui.dart';
-import 'package:image_picker/image_picker.dart';
+// import 'package:image_picker/image_picker.dart';
 
 void main() => runApp(new MyApp());
 
@@ -15,44 +14,62 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  GlobalKey<ScanViewState> scanView;
+  GlobalKey<ZBarViewState> scanView;
+  Size cameraSize;
 
   @override
   void initState() {
     super.initState();
-    scanView = GlobalKey<ScanViewState>();
+    scanView = GlobalKey<ZBarViewState>();
   }
 
   @override
   Widget build(BuildContext context) {
     return new MaterialApp(
       home: Builder(builder: (context) {
-        ScreenUtil.getInstance().init(context);
         Size pictureSize = Size(
-            ScreenUtil.screenWidth,
-            ScreenUtil.screenHeight -
-                ScreenUtil.appBarHeight -
-                ScreenUtil.statusBarHeight);
-        Size scanSize =
-            Size(ScreenUtil.screenWidth * 0.8, ScreenUtil.screenWidth * 0.8);
+            ScreenUtil.getInstance().screenWidth,
+            ScreenUtil.getInstance().screenHeight -
+                ScreenUtil.getInstance().appBarHeight -
+                ScreenUtil.getInstance().statusBarHeight);
+        if (ScreenUtil.getInstance().screenDensity == 1) {
+          return Container();
+        }
         return new Scaffold(
             appBar: new AppBar(
               title: const Text('Plugin example app'),
             ),
-            body: Column(
+            body: Stack(
               children: <Widget>[
-                ScanView(
+                // ScanView(
+                //   key: scanView,
+                //   scanAilgn: Alignment.center,
+                //   scanSize: scanSize,
+                //   viewSize: pictureSize,
+                //   maskColor: Colors.white,
+                //   devicePixelRatio: ScreenUtil.getInstance().screenDensity,
+                //   onScan: (result) async {
+                //     showWeuiSuccessToast(context: context, message: Text(result.data));
+                //     print(result.data);
+                //     return false;
+                //   },
+                // ),
+                ZBarView(
                   key: scanView,
-                  scanAilgn: Alignment.center,
-                  scanSize: scanSize,
-                  viewSize: pictureSize,
-                  maskColor: Colors.white,
-                  devicePixelRatio: ScreenUtil.screenDensity,
+                  width: pictureSize.width.toInt(),
+                  height: pictureSize.height.toInt(),
                   onScan: (result) async {
-                    print(result.data);
-                    return false;
+                    showWeuiSuccessToast(context: context, message: Text(result.data));
+                    await Future.delayed(Duration(seconds: 1));
+                    return true;
                   },
                 ),
+                Container(
+                    child: Text(
+                        '屏幕dp宽度:${ScreenUtil.getInstance().screenWidth}\n屏幕dp高度:${ScreenUtil.getInstance().screenHeight}\n DP 对 PX比率:${ScreenUtil.getInstance().screenDensity}\n' +
+                            (this.cameraSize != null
+                                ? '图片宽度:${cameraSize.width}\n图片高度:${cameraSize.height}'
+                                : '')))
               ],
             ));
       }),

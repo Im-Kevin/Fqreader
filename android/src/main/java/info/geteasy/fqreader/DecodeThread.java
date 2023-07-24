@@ -4,6 +4,7 @@ import android.graphics.Rect;
 import android.hardware.Camera;
 import android.os.Handler;
 import android.os.Message;
+import android.util.Log;
 
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.BinaryBitmap;
@@ -92,48 +93,22 @@ public class DecodeThread extends Thread {
                 byte[] data = mImageBytes;
                 int width = mCameraSize.width;
                 int height = mCameraSize.height;
-                int rotationCount = getRotationCount();
-                if (rotationCount == 1 || rotationCount == 3) {
-                    int tmp = width;
-                    width = height;
-                    height = tmp;
-                }
-                data = getRotatedData(data, mCamera);
-                Rect scanRect = mScanRect == null? new Rect(0,0,width,height):mScanRect;
+
+                Rect scanRect = mScanRect == null? new Rect(0,0,width,height):new Rect(mScanRect.top,mScanRect.left,mScanRect.bottom,mScanRect.right);
                 com.google.zxing.Result rawResult = null;
-                LuminanceSource source = new PlanarYUVLuminanceSource(data,
-                        width, height,
-                        scanRect.left, scanRect.top,
-                        scanRect.width(), scanRect.height(),
-                        false);
+                rawResult = decode(data, width, height, scanRect, rawResult);
 
-                BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
-                try {
-
-                    rawResult = mDecode.decode(bitmap);
-                } catch (ReaderException re) {
-                    // continue
-                } catch (NullPointerException npe) {
-                    // This is terrible
-                } catch (ArrayIndexOutOfBoundsException aoe) {
-                    //
-                } finally {
-                    mDecode.reset();
-                }
-
-                if (rawResult == null) {
-                    LuminanceSource invertedSource = source.invert();
-                    bitmap = new BinaryBitmap(new HybridBinarizer(invertedSource));
-                    try {
-                        rawResult = mDecode.decode(bitmap);
-
-                    } catch (NotFoundException e) {
-                        // continue
-                    } finally {
-                        mDecode.reset();
+                if(rawResult == null){
+                    int rotationCount = getRotationCount();
+                    if (rotationCount == 1 || rotationCount == 3) {
+                        int tmp = width;
+                        width = height;
+                        height = tmp;
                     }
+                    data = getRotatedData(data, mCamera);
+                    scanRect = mScanRect == null? new Rect(0,0,width,height):mScanRect;
+                    rawResult = decode(data, width, height, scanRect, rawResult);
                 }
-
                 if (rawResult != null) {
                     Message msg = new Message();
                     msg.what = 2;
@@ -152,6 +127,49 @@ public class DecodeThread extends Thread {
                 e.printStackTrace();
             }
         }
+    }
+
+    private Result decode(byte[] data, int width, int height, Rect scanRect, Result rawResult) {
+        LuminanceSource source = null;
+        try{
+            source =  new PlanarYUVLuminanceSource(data,
+                    width, height,
+                    scanRect.left, scanRect.top,
+                    scanRect.width(), scanRect.height(),
+                    false);
+        }catch (Exception e){
+            Log.e("mCameraSize", "width=" +mCameraSize.width + "height="+mCameraSize.height);
+            Log.e("ScanRect", scanRect.toString());
+            e.printStackTrace();
+        }
+
+        BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
+        try {
+
+            rawResult = mDecode.decode(bitmap);
+        } catch (ReaderException re) {
+            // continue
+        } catch (NullPointerException npe) {
+            // This is terrible
+        } catch (ArrayIndexOutOfBoundsException aoe) {
+            //
+        } finally {
+            mDecode.reset();
+        }
+
+        if (rawResult == null) {
+            LuminanceSource invertedSource = source.invert();
+            bitmap = new BinaryBitmap(new HybridBinarizer(invertedSource));
+            try {
+                rawResult = mDecode.decode(bitmap);
+
+            } catch (NotFoundException e) {
+                // continue
+            } finally {
+                mDecode.reset();
+            }
+        }
+        return rawResult;
     }
 
 

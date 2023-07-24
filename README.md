@@ -6,7 +6,7 @@ Usage
 Add this to your package's pubspec.yaml file:
 ``` yaml
 dependencies:
-  fqreader: "^0.1.3"
+  fqreader: "^0.1.6"
 ```
 
 ## Fqreader

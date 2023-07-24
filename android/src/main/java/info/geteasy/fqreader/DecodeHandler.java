@@ -7,6 +7,7 @@ import android.os.Message;
 
 import java.util.List;
 
+import io.flutter.plugin.common.BinaryMessenger;
 import io.flutter.plugin.common.EventChannel;
 import io.flutter.plugin.common.PluginRegistry;
 
@@ -55,9 +56,9 @@ public class DecodeHandler extends Handler implements  Camera.PreviewCallback {
     /**
      * 注册通知事件
      */
-    void registerEventChannel(PluginRegistry.Registrar registrar, long textureEntryId) {
+    void registerEventChannel(BinaryMessenger messenger, long textureEntryId) {
         new EventChannel(
-                registrar.messenger(), "fqreader/scanEvents" + textureEntryId)
+                messenger, "fqreader/scanEvents" + textureEntryId)
                 .setStreamHandler(
                         new EventChannel.StreamHandler() {
                             @Override

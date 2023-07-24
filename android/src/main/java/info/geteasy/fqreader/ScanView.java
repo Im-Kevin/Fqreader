@@ -1,5 +1,6 @@
 package info.geteasy.fqreader;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.res.Configuration;
 import android.graphics.Rect;
@@ -30,6 +31,7 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 
+import io.flutter.plugin.common.BinaryMessenger;
 import io.flutter.plugin.common.EventChannel;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.PluginRegistry;
@@ -45,8 +47,9 @@ public class ScanView {
     private Camera mCamera;
     private DecodeHandler mDecodeHandler;
 
-    ScanView(FlutterView view,
-             PluginRegistry.Registrar registrar,
+    ScanView(TextureRegistry textureRegistry,
+             BinaryMessenger messenger,
+             Activity activity,
              List<String> scanType,
              MethodChannel.Result result) {
         try {
@@ -54,8 +57,7 @@ public class ScanView {
             Camera.Parameters param = mCamera.getParameters();
             param.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
             param.setRotation(90);
-            Context context = view.getContext();
-            DisplayMetrics dm = context.getResources().getDisplayMetrics();
+            DisplayMetrics dm = activity.getResources().getDisplayMetrics();
             // 选择最合适的预览图像大小
             Camera.Size currentSize = matchSize(dm.heightPixels, dm.widthPixels, param);
             // 设置预览图像大小
@@ -64,18 +66,18 @@ public class ScanView {
             mCamera.setDisplayOrientation(90); //旋转90度,变成竖屏
 
             //链接flutter纹理
-            this.textureEntry = view.createSurfaceTexture();
+            this.textureEntry = textureRegistry.createSurfaceTexture();
             mCamera.setPreviewTexture(textureEntry.surfaceTexture());
             
             HashMap<String, Object> resultMap = new HashMap<String, Object>();
             resultMap.put("textureID", textureEntry.id());
-            resultMap.put("cameraWidth", currentSize.width);
-            resultMap.put("cameraHeight", currentSize.height);
+            resultMap.put("cameraWidth", currentSize.height);
+            resultMap.put("cameraHeight", currentSize.width);
             //返回纹理ID
             result.success(resultMap);
 
             mDecodeHandler = new DecodeHandler(mCamera, scanType);
-            mDecodeHandler.registerEventChannel(registrar, textureEntry.id());
+            mDecodeHandler.registerEventChannel(messenger, textureEntry.id());
 
         } catch (Exception e) {
             result.error("ScanView init", e.getMessage(), null);
@@ -154,7 +156,7 @@ public class ScanView {
             double diffOld = Math.abs(currentRatio - viewRatio); //与控件比例的差异 旧
             double diffNew = Math.abs(item.width * 1.0 / item.height - viewRatio);  //与控件比例的差异 新
 
-            if (diffOld > diffNew) { //如果旧的小于新的则使用新的预览大小
+            if (diffOld > diffNew) { //如果旧的差异大于新的则使用新的预览大小
                 currentSize = item;
                 currentRatio = item.width * 1.0 / item.height;
             } else if (diffOld == diffNew) {
